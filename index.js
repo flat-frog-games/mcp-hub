@@ -86,8 +86,8 @@ app.get('/:server/sse', async (req, res) => {
     // SDK StdioClientTransport explicitly parses and drops non-jsonrpc invalid lines
     // automatically making it perfectly stable.
     try {
-        await stdioTransport.start();
         activeSessions.set(sessionId, sseTransport);
+        await stdioTransport.start();
     } catch (e) {
         console.error(`[${serverName}] Failed to start stdio process:`, e);
         cleanup();
