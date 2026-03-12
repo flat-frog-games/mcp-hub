@@ -116,6 +116,7 @@ app.post('/:server/messages', async (req, res) => {
 });
 
 app.get('/health', (req, res) => res.send('OK'));
+app.get('/', (req, res) => res.send('MCP Hub is running'));
 
 app.listen(PORT, () => {
     console.log(`MCP Hub listening on port ${PORT}`);
