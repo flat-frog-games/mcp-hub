@@ -1,10 +1,12 @@
 const { Client } = require("@modelcontextprotocol/sdk/client/index.js");
 const { SSEClientTransport } = require("@modelcontextprotocol/sdk/client/sse.js");
 
+const BASE_URL = process.env.BASE_URL || "https://mcp.flatfrog.games";
+
 const MCP_URLS = [
-  "https://mcp.flatfrog.games/sentry/sse",
-  "https://mcp.flatfrog.games/github/sse",
-  "https://mcp.flatfrog.games/notion/sse"
+  `${BASE_URL}/sentry/sse`,
+  `${BASE_URL}/github/sse`,
+  `${BASE_URL}/notion/sse`
 ];
 
 describe("MCP API Functional Tests", () => {
