@@ -9,11 +9,9 @@ terraform {
     bucket  = "flatfrog.games"
     key     = "arundel.cloud/live/prod/aws_ecs_services/mcp/terraform.tfstate"
     region  = "eu-west-2"
-    profile = "arundelcloud"
   }
 }
 
 provider "aws" {
   region  = "eu-west-2"
-  profile = "arundelcloud"
 }
