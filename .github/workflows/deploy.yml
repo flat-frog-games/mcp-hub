@@ -3,7 +3,7 @@ name: Deploy MCP Hub
 on:
   push:
     branches:
-      - main
+      - master
   workflow_dispatch:
 
 jobs:
