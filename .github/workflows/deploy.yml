@@ -18,12 +18,26 @@ jobs:
           cache: 'npm'
       - name: Install dependencies
         run: npm ci
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-2
+      - name: Fetch SSM Parameters
+        run: |
+          echo "SENTRY_TOKEN=$(aws ssm get-parameter --name "/arundel-cloud/mcp/sentry_token" --with-decryption --query "Parameter.Value" --output text)" >> $GITHUB_ENV
+          echo "GITHUB_PAT=$(aws ssm get-parameter --name "/arundel-cloud/mcp/github_pat" --with-decryption --query "Parameter.Value" --output text)" >> $GITHUB_ENV
+          echo "NOTION_API_TOKEN=$(aws ssm get-parameter --name "/arundel-cloud/mcp/notion_api_token" --with-decryption --query "Parameter.Value" --output text)" >> $GITHUB_ENV
       # Notice: Currently functional tests hit the live URL. We can run them just to be certain prod is accessible,
       # but ideally these would run against a local dev container in the future.
       - name: Start local MCP Hub app
         run: node index.js &
         env:
           PORT: 8083
+          SENTRY_TOKEN: ${{ env.SENTRY_TOKEN }}
+          GITHUB_PAT: ${{ env.GITHUB_PAT }}
+          NOTION_API_TOKEN: ${{ env.NOTION_API_TOKEN }}
       - name: Run Functional Tests Locally
         run: |
           sleep 3
