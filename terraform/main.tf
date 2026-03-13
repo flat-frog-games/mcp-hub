@@ -19,6 +19,14 @@ data "aws_ssm_parameter" "notion_api_token" {
   name = "/arundel-cloud/mcp/notion_api_token"
 }
 
+data "aws_ssm_parameter" "miro_api_token" {
+  name = "/arundel-cloud/mcp/miro_api_token"
+}
+
+data "aws_ssm_parameter" "hub_api_key" {
+  name = "/arundel-cloud/mcp/hub_api_key"
+}
+
 resource "aws_ecs_task_definition" "mcp_hub" {
   family                   = "mcp-hub"
   requires_compatibilities = ["EXTERNAL"]
@@ -29,8 +37,8 @@ resource "aws_ecs_task_definition" "mcp_hub" {
     {
       name      = "mcp-hub"
       image     = "649968665109.dkr.ecr.eu-west-2.amazonaws.com/mcp-hub:latest"
-      cpu       = 256
-      memory    = 512
+      cpu       = 512
+      memory    = 1024
       essential = true
       portMappings = [
         {
@@ -51,6 +59,14 @@ resource "aws_ecs_task_definition" "mcp_hub" {
         {
           name      = "NOTION_API_TOKEN"
           valueFrom = data.aws_ssm_parameter.notion_api_token.arn
+        },
+        {
+          name      = "MIRO_API_TOKEN"
+          valueFrom = data.aws_ssm_parameter.miro_api_token.arn
+        },
+        {
+          name      = "HUB_API_KEY"
+          valueFrom = data.aws_ssm_parameter.hub_api_key.arn
         }
       ]
       logConfiguration = {

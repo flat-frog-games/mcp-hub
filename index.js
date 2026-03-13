@@ -4,6 +4,14 @@ import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import pino from 'pino';
+
+const logger = pino({
+    transport: {
+        target: 'pino-pretty',
+        options: { colorize: true }
+    }
+});
 
 const execAsync = promisify(exec);
 
@@ -15,25 +23,49 @@ const activeSessions = new Map();
 
 const serverConfigs = {
     github: {
-        cmd: "npx",
-        args: ["--no-install", "@modelcontextprotocol/server-github"],
-        env: { GITHUB_PERSONAL_ACCESS_TOKEN: process.env.GITHUB_PAT }
+        cmd: "node",
+        args: ["./node_modules/@modelcontextprotocol/server-github/dist/index.js"],
+        env: { GITHUB_PERSONAL_ACCESS_TOKEN: process.env.GITHUB_PAT },
+        allowedTools: ['github_search_code', 'github_create_issue', 'github_create_pull_request', 'github_get_issue', 'github_add_issue_comment', 'github_get_file_contents', 'github_push_files', 'github_update_issue']
     },
     sentry: {
-        cmd: "npx",
-        args: ["--no-install", "@sentry/mcp-server"],
+        cmd: "node",
+        args: ["./node_modules/@sentry/mcp-server/dist/index.js"],
         env: { SENTRY_ACCESS_TOKEN: process.env.SENTRY_TOKEN }
     },
     notion: {
-        cmd: "npx",
-        args: ["--no-install", "@notionhq/notion-mcp-server"],
-        env: {
-            NOTION_TOKEN: process.env.NOTION_API_TOKEN
-        }
+        cmd: "node",
+        args: ["./node_modules/@notionhq/notion-mcp-server/bin/cli.mjs"],
+        env: { NOTION_TOKEN: process.env.NOTION_API_TOKEN }
+    },
+    miro: {
+        cmd: "node",
+        args: ["./node_modules/@aditya.mishra/miro-mcp/build/index.js"],
+        env: { MIRO_API_TOKEN: process.env.MIRO_API_TOKEN }
     }
 };
 
-app.get('/:server/sse', async (req, res) => {
+const requireApiKey = (req, res, next) => {
+    const apiKey = process.env.HUB_API_KEY;
+    if (!apiKey) {
+        logger.warn('HUB_API_KEY is not set in environment variables');
+        return res.status(500).json({ error: 'Server configuration error: HUB_API_KEY missing' });
+    }
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized: Missing or invalid Authorization header' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    if (token !== apiKey) {
+        return res.status(403).json({ error: 'Forbidden: Invalid API key' });
+    }
+
+    next();
+};
+
+app.get('/:server/sse', requireApiKey, async (req, res) => {
     const serverName = req.params.server;
     const config = serverConfigs[serverName];
     if (!config) {
@@ -43,7 +75,7 @@ app.get('/:server/sse', async (req, res) => {
     // Create the SSE Transport attached to the HTTP response
     const sseTransport = new SSEServerTransport(`/${serverName}/messages`, res);
     const sessionId = sseTransport.sessionId;
-    console.log(`[${serverName}] New SSE proxy connection established: ${sessionId}`);
+    logger.info(`[${serverName}] New SSE proxy connection established: ${sessionId}`);
     
     // We don't overwrite start() or handlePostMessage(), just call start() to initiate SSE connection
     await sseTransport.start();
@@ -63,21 +95,35 @@ app.get('/:server/sse', async (req, res) => {
         env: childEnv
     });
 
+    const pendingToolsListRequests = new Set();
+
     sseTransport.onmessage = (msg) => {
+        if (msg.method === 'tools/list') {
+            pendingToolsListRequests.add(msg.id);
+        }
         // Forward from IDE (via SSE POST) to child process stdio
-        stdioTransport.send(msg).catch(e => console.error(`[${serverName} ERR] stdio send failed:`, e));
+        stdioTransport.send(msg).catch(e => logger.error(`[${serverName} ERR] stdio send failed:`, e));
     };
     
     stdioTransport.onmessage = (msg) => {
+        // Intercept tools/list response to curate tools and prevent bloat
+        if (msg.id && pendingToolsListRequests.has(msg.id) && msg.result && msg.result.tools) {
+            pendingToolsListRequests.delete(msg.id);
+            if (config.allowedTools) {
+                const originalCount = msg.result.tools.length;
+                msg.result.tools = msg.result.tools.filter(t => config.allowedTools.includes(t.name));
+                logger.info(`[${serverName}] Curated tools for session ${sessionId}: reduced from ${originalCount} to ${msg.result.tools.length}`);
+            }
+        }
         // Forward from child process (stdio) to IDE (via SSE)
-        sseTransport.send(msg).catch(e => console.error(`[${serverName} ERR] sse send failed:`, e));
+        sseTransport.send(msg).catch(e => logger.error(`[${serverName} ERR] sse send failed:`, e));
     };
 
     let isCleaningUp = false;
     const cleanup = () => {
         if (isCleaningUp) return;
         isCleaningUp = true;
-        console.log(`[${serverName}] Cleaning up transports for session: ${sessionId}`);
+        logger.info(`[${serverName}] Cleaning up transports for session: ${sessionId}`);
         clearInterval(heartbeat);
         try { stdioTransport.close().catch(() => {}); } catch(e) {}
         try { sseTransport.close().catch(() => {}); } catch(e) {}
@@ -86,8 +132,8 @@ app.get('/:server/sse', async (req, res) => {
 
     sseTransport.onclose = () => cleanup();
     stdioTransport.onclose = () => cleanup();
-    sseTransport.onerror = (err) => console.log(`[${serverName}] SSE error:`, err);
-    stdioTransport.onerror = (err) => console.log(`[${serverName}] Stdio error:`, err);
+    sseTransport.onerror = (err) => logger.error(`[${serverName}] SSE error:`, err);
+    stdioTransport.onerror = (err) => logger.error(`[${serverName}] Stdio error:`, err);
     
     // SDK StdioClientTransport explicitly parses and drops non-jsonrpc invalid lines
     // automatically making it perfectly stable.
@@ -95,30 +141,30 @@ app.get('/:server/sse', async (req, res) => {
         activeSessions.set(sessionId, sseTransport);
         await stdioTransport.start();
     } catch (e) {
-        console.error(`[${serverName}] Failed to start stdio process:`, e);
+        logger.error(`[${serverName}] Failed to start stdio process:`, e);
         cleanup();
     }
     
     req.on('close', () => {
-        console.log(`[${serverName}] Client disconnected, cleaning up session: ${sessionId}`);
+        logger.info(`[${serverName}] Client disconnected, cleaning up session: ${sessionId}`);
         cleanup();
     });
 });
 
-app.post('/:server/messages', async (req, res) => {
+app.post('/:server/messages', requireApiKey, async (req, res) => {
     const sessionId = req.query.sessionId;
-    console.log(`[${req.params.server}] POST received for sessionId: ${sessionId}`);
+    logger.info(`[${req.params.server}] POST received for sessionId: ${sessionId}`);
     const transport = activeSessions.get(sessionId);
 
     if (!transport) {
-        console.log(`[${req.params.server}] Session NOT FOUND. Active sessions:`, [...activeSessions.keys()]);
+        logger.info(`[${req.params.server}] Session NOT FOUND. Active sessions:`, [...activeSessions.keys()]);
         return res.status(404).send('Session not found');
     }
 
     try {
         await transport.handlePostMessage(req, res, req.body);
     } catch(e) {
-        console.error("Error handling post message:", e);
+        logger.error("Error handling post message:", e);
         res.status(500).send("Message handling failed");
     }
 });
@@ -130,6 +176,8 @@ app.get('/health/deep', async (req, res) => {
             GITHUB_PAT: !!process.env.GITHUB_PAT,
             SENTRY_TOKEN: !!process.env.SENTRY_TOKEN,
             NOTION_API_TOKEN: !!process.env.NOTION_API_TOKEN,
+            MIRO_API_TOKEN: !!process.env.MIRO_API_TOKEN,
+            HUB_API_KEY: !!process.env.HUB_API_KEY,
         },
         npx: false,
         status: 'OK'
@@ -143,7 +191,7 @@ app.get('/health/deep', async (req, res) => {
         checks.status = 'ERROR';
     }
 
-    if (!checks.env.GITHUB_PAT || !checks.env.SENTRY_TOKEN || !checks.env.NOTION_API_TOKEN) {
+    if (!checks.env.GITHUB_PAT || !checks.env.SENTRY_TOKEN || !checks.env.NOTION_API_TOKEN || !checks.env.MIRO_API_TOKEN || !checks.env.HUB_API_KEY) {
         checks.status = 'ERROR';
     }
 
@@ -156,5 +204,5 @@ app.get('/health/deep', async (req, res) => {
 app.get('/', (req, res) => res.send('MCP Hub is running'));
 
 app.listen(PORT, () => {
-    console.log(`MCP Hub listening on port ${PORT}`);
+    logger.info(`MCP Hub listening on port ${PORT}`);
 });

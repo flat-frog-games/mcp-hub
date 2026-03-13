@@ -15,7 +15,9 @@ describe("MCP API Functional Tests", () => {
 
   test.each(MCP_URLS)("should connect to %s and list tools", async (url) => {
     // 1. Setup transport
-    const transport = new SSEClientTransport(new URL(url));
+    const transport = new SSEClientTransport(new URL(url), {
+      requestInit: { headers: { Authorization: `Bearer ${process.env.HUB_API_KEY}` } }
+    });
     const client = new Client(
       { name: "test-client", version: "1.0.0" },
       { capabilities: {} }
