@@ -71,7 +71,7 @@ resource "aws_ecs_service" "mcp_hub" {
   name            = "flatfrog-mcp-hub"
   cluster         = data.terraform_remote_state.aws_ecs_core.outputs.cluster_id
   task_definition = aws_ecs_task_definition.mcp_hub.arn
-  desired_count   = 1
+  desired_count   = 0
   launch_type     = "EXTERNAL"
 
   tags = {
