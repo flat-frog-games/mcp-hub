@@ -136,7 +136,7 @@ app.get('/health/deep', async (req, res) => {
     };
 
     try {
-        await execAsync('npx --version');
+        await execAsync('npx --version', { timeout: 3000 });
         checks.npx = true;
     } catch (e) {
         checks.npx = false;
