@@ -4,7 +4,6 @@ data "terraform_remote_state" "aws_ecs_core" {
     bucket  = "flatfrog.games"
     key     = "arundel.cloud/live/prod/aws_ecs_core/terraform.tfstate"
     region  = "eu-west-2"
-    profile = "arundelcloud"
   }
 }
 
