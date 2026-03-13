@@ -26,7 +26,7 @@ const serverConfigs = {
         cmd: "node",
         args: ["./node_modules/@modelcontextprotocol/server-github/dist/index.js"],
         env: { GITHUB_PERSONAL_ACCESS_TOKEN: process.env.GITHUB_PAT },
-        allowedTools: ['github_search_code', 'github_create_issue', 'github_create_pull_request', 'github_get_issue', 'github_add_issue_comment', 'github_get_file_contents', 'github_push_files', 'github_update_issue']
+        allowedTools: ['search_code', 'create_issue', 'create_pull_request', 'get_issue', 'add_issue_comment', 'get_file_contents', 'push_files', 'update_issue']
     },
     sentry: {
         cmd: "node",
