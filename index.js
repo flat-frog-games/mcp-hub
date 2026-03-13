@@ -36,11 +36,10 @@ app.get('/:server/sse', async (req, res) => {
         return res.status(404).send('Server not found');
     }
 
-    const sessionId = crypto.randomUUID();
-    console.log(`[${serverName}] New SSE proxy connection established: ${sessionId}`);
-
     // Create the SSE Transport attached to the HTTP response
-    const sseTransport = new SSEServerTransport(`/${serverName}/messages?sessionId=${sessionId}`, res);
+    const sseTransport = new SSEServerTransport(`/${serverName}/messages`, res);
+    const sessionId = sseTransport.sessionId;
+    console.log(`[${serverName}] New SSE proxy connection established: ${sessionId}`);
     
     // We don't overwrite start() or handlePostMessage(), just call start() to initiate SSE connection
     await sseTransport.start();
@@ -70,7 +69,10 @@ app.get('/:server/sse', async (req, res) => {
         sseTransport.send(msg).catch(e => console.error(`[${serverName} ERR] sse send failed:`, e));
     };
 
+    let isCleaningUp = false;
     const cleanup = () => {
+        if (isCleaningUp) return;
+        isCleaningUp = true;
         console.log(`[${serverName}] Cleaning up transports for session: ${sessionId}`);
         clearInterval(heartbeat);
         try { stdioTransport.close().catch(() => {}); } catch(e) {}
@@ -101,14 +103,16 @@ app.get('/:server/sse', async (req, res) => {
 
 app.post('/:server/messages', async (req, res) => {
     const sessionId = req.query.sessionId;
+    console.log(`[${req.params.server}] POST received for sessionId: ${sessionId}`);
     const transport = activeSessions.get(sessionId);
 
     if (!transport) {
+        console.log(`[${req.params.server}] Session NOT FOUND. Active sessions:`, [...activeSessions.keys()]);
         return res.status(404).send('Session not found');
     }
 
     try {
-        await transport.handlePostMessage(req, res);
+        await transport.handlePostMessage(req, res, req.body);
     } catch(e) {
         console.error("Error handling post message:", e);
         res.status(500).send("Message handling failed");
