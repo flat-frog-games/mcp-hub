@@ -6,7 +6,7 @@ RUN apk add --no-cache bash curl git
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install --production
+RUN npm install
 
 COPY index.js .
 
