@@ -2,6 +2,10 @@ import express from 'express';
 import crypto from 'crypto';
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
@@ -120,6 +124,35 @@ app.post('/:server/messages', async (req, res) => {
 });
 
 app.get('/health', (req, res) => res.send('OK'));
+app.get('/health/deep', async (req, res) => {
+    const checks = {
+        env: {
+            GITHUB_PAT: !!process.env.GITHUB_PAT,
+            SENTRY_TOKEN: !!process.env.SENTRY_TOKEN,
+            NOTION_API_TOKEN: !!process.env.NOTION_API_TOKEN,
+        },
+        npx: false,
+        status: 'OK'
+    };
+
+    try {
+        await execAsync('npx --version');
+        checks.npx = true;
+    } catch (e) {
+        checks.npx = false;
+        checks.status = 'ERROR';
+    }
+
+    if (!checks.env.GITHUB_PAT || !checks.env.SENTRY_TOKEN || !checks.env.NOTION_API_TOKEN) {
+        checks.status = 'ERROR';
+    }
+
+    if (checks.status === 'OK') {
+        res.status(200).json(checks);
+    } else {
+        res.status(500).json(checks);
+    }
+});
 app.get('/', (req, res) => res.send('MCP Hub is running'));
 
 app.listen(PORT, () => {
