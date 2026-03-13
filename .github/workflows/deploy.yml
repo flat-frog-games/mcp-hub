@@ -29,6 +29,8 @@ jobs:
           echo "SENTRY_TOKEN=$(aws ssm get-parameter --name "/arundel-cloud/mcp/sentry_token" --with-decryption --query "Parameter.Value" --output text)" >> $GITHUB_ENV
           echo "GITHUB_PAT=$(aws ssm get-parameter --name "/arundel-cloud/mcp/github_pat" --with-decryption --query "Parameter.Value" --output text)" >> $GITHUB_ENV
           echo "NOTION_API_TOKEN=$(aws ssm get-parameter --name "/arundel-cloud/mcp/notion_api_token" --with-decryption --query "Parameter.Value" --output text)" >> $GITHUB_ENV
+          echo "MIRO_API_TOKEN=$(aws ssm get-parameter --name "/arundel-cloud/mcp/miro_api_token" --with-decryption --query "Parameter.Value" --output text)" >> $GITHUB_ENV
+          echo "HUB_API_KEY=$(aws ssm get-parameter --name "/arundel-cloud/mcp/hub_api_key" --with-decryption --query "Parameter.Value" --output text)" >> $GITHUB_ENV
       # Notice: Currently functional tests hit the live URL. We can run them just to be certain prod is accessible,
       # but ideally these would run against a local dev container in the future.
       - name: Start local MCP Hub app
@@ -38,10 +40,12 @@ jobs:
           SENTRY_TOKEN: ${{ env.SENTRY_TOKEN }}
           GITHUB_PAT: ${{ env.GITHUB_PAT }}
           NOTION_API_TOKEN: ${{ env.NOTION_API_TOKEN }}
+          MIRO_API_TOKEN: ${{ env.MIRO_API_TOKEN }}
+          HUB_API_KEY: ${{ env.HUB_API_KEY }}
       - name: Run Functional Tests Locally
         run: |
           sleep 3
-          BASE_URL=http://localhost:8083 npx jest tests/mcp-functional.test.cjs
+          HUB_API_KEY=${{ env.HUB_API_KEY }} BASE_URL=http://localhost:8083 npx jest tests/mcp-functional.test.cjs
 
   deploy-infra:
     name: Deploy Infrastructure
