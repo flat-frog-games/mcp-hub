@@ -28,6 +28,12 @@ const serverConfigs = {
         env: { GITHUB_PERSONAL_ACCESS_TOKEN: process.env.GITHUB_PAT },
         allowedTools: ['search_code', 'create_issue', 'create_pull_request', 'get_issue', 'add_issue_comment', 'get_file_contents', 'push_files', 'update_issue']
     },
+    'github-flatfrog': {
+        cmd: "node",
+        args: ["./node_modules/@modelcontextprotocol/server-github/dist/index.js"],
+        env: { GITHUB_PERSONAL_ACCESS_TOKEN: process.env.GITHUB_PAT_FLATFROG },
+        allowedTools: ['search_code', 'create_issue', 'create_pull_request', 'get_issue', 'add_issue_comment', 'get_file_contents', 'push_files', 'update_issue']
+    },
     sentry: {
         cmd: "node",
         args: ["./node_modules/@sentry/mcp-server/dist/index.js"],
@@ -174,6 +180,7 @@ app.get('/health/deep', async (req, res) => {
     const checks = {
         env: {
             GITHUB_PAT: !!process.env.GITHUB_PAT,
+            GITHUB_PAT_FLATFROG: !!process.env.GITHUB_PAT_FLATFROG,
             SENTRY_TOKEN: !!process.env.SENTRY_TOKEN,
             NOTION_API_TOKEN: !!process.env.NOTION_API_TOKEN,
             MIRO_API_TOKEN: !!process.env.MIRO_API_TOKEN,
@@ -191,7 +198,7 @@ app.get('/health/deep', async (req, res) => {
         checks.status = 'ERROR';
     }
 
-    if (!checks.env.GITHUB_PAT || !checks.env.SENTRY_TOKEN || !checks.env.NOTION_API_TOKEN || !checks.env.MIRO_API_TOKEN || !checks.env.HUB_API_KEY) {
+    if (!checks.env.GITHUB_PAT || !checks.env.GITHUB_PAT_FLATFROG || !checks.env.SENTRY_TOKEN || !checks.env.NOTION_API_TOKEN || !checks.env.MIRO_API_TOKEN || !checks.env.HUB_API_KEY) {
         checks.status = 'ERROR';
     }
 
