@@ -41,7 +41,7 @@ const serverConfigs = {
     miro: {
         cmd: "node",
         args: ["./node_modules/@aditya.mishra/miro-mcp/build/index.js"],
-        env: { MIRO_API_TOKEN: process.env.MIRO_API_TOKEN }
+        env: { MIRO_OAUTH_TOKEN: process.env.MIRO_API_TOKEN }
     }
 };
 
