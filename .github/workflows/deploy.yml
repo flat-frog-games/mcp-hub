@@ -28,6 +28,7 @@ jobs:
         run: |
           echo "SENTRY_TOKEN=$(aws ssm get-parameter --name "/arundel-cloud/mcp/sentry_token" --with-decryption --query "Parameter.Value" --output text)" >> $GITHUB_ENV
           echo "GITHUB_PAT=$(aws ssm get-parameter --name "/arundel-cloud/mcp/github_pat" --with-decryption --query "Parameter.Value" --output text)" >> $GITHUB_ENV
+          echo "GITHUB_PAT_FLATFROG=$(aws ssm get-parameter --name "/arundel-cloud/mcp/github_pat_flatfrog" --with-decryption --query "Parameter.Value" --output text)" >> $GITHUB_ENV
           echo "NOTION_API_TOKEN=$(aws ssm get-parameter --name "/arundel-cloud/mcp/notion_api_token" --with-decryption --query "Parameter.Value" --output text)" >> $GITHUB_ENV
           echo "MIRO_API_TOKEN=$(aws ssm get-parameter --name "/arundel-cloud/mcp/miro_api_token" --with-decryption --query "Parameter.Value" --output text)" >> $GITHUB_ENV
           echo "HUB_API_KEY=$(aws ssm get-parameter --name "/arundel-cloud/mcp/hub_api_key" --with-decryption --query "Parameter.Value" --output text)" >> $GITHUB_ENV
@@ -39,6 +40,7 @@ jobs:
           PORT: 8083
           SENTRY_TOKEN: ${{ env.SENTRY_TOKEN }}
           GITHUB_PAT: ${{ env.GITHUB_PAT }}
+          GITHUB_PAT_FLATFROG: ${{ env.GITHUB_PAT_FLATFROG }}
           NOTION_API_TOKEN: ${{ env.NOTION_API_TOKEN }}
           MIRO_API_TOKEN: ${{ env.MIRO_API_TOKEN }}
           HUB_API_KEY: ${{ env.HUB_API_KEY }}
