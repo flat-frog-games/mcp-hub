@@ -95,10 +95,14 @@ app.get('/:server/sse', requireApiKey, async (req, res) => {
 
     // Create Stdio Client Transport to launch the actual MCP tool locally
     const childEnv = { ...process.env, ...config.env };
+    
+    // We can explicitly spawn the child process ourselves to catch stderr
+    // but StdioClientTransport already spawns it and gives us the hook
     const stdioTransport = new StdioClientTransport({
         command: config.cmd,
         args: config.args,
-        env: childEnv
+        env: childEnv,
+        stderr: 'pipe'
     });
 
     const pendingToolsListRequests = new Set();
@@ -146,6 +150,13 @@ app.get('/:server/sse', requireApiKey, async (req, res) => {
     try {
         activeSessions.set(sessionId, sseTransport);
         await stdioTransport.start();
+        
+        // Listen to stderr for debugging internal crashes
+        if (stdioTransport.stderr) {
+            stdioTransport.stderr.on('data', (d) => {
+                logger.error(`[${serverName} STDERR] ${d.toString()}`);
+            });
+        }
     } catch (e) {
         logger.error(`[${serverName}] Failed to start stdio process:`, e);
         cleanup();
