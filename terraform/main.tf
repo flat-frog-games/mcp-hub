@@ -40,7 +40,7 @@ resource "aws_ecs_task_definition" "mcp_hub" {
   container_definitions = jsonencode([
     {
       name      = "mcp-hub"
-      image     = "649968665109.dkr.ecr.eu-west-2.amazonaws.com/mcp-hub:v2"
+      image     = "649968665109.dkr.ecr.eu-west-2.amazonaws.com/mcp-hub:v3"
       cpu       = 512
       memory    = 1024
       essential = true
