@@ -25,14 +25,12 @@ const serverConfigs = {
     github: {
         cmd: "node",
         args: ["./node_modules/@modelcontextprotocol/server-github/dist/index.js"],
-        env: { GITHUB_PERSONAL_ACCESS_TOKEN: process.env.GITHUB_PAT },
-        allowedTools: ['search_code', 'create_issue', 'create_pull_request', 'get_issue', 'add_issue_comment', 'get_file_contents', 'push_files', 'update_issue']
+        env: { GITHUB_PERSONAL_ACCESS_TOKEN: process.env.GITHUB_PAT }
     },
     'github-flatfrog': {
         cmd: "node",
         args: ["./node_modules/@modelcontextprotocol/server-github/dist/index.js"],
-        env: { GITHUB_PERSONAL_ACCESS_TOKEN: process.env.GITHUB_PAT_FLATFROG },
-        allowedTools: ['search_code', 'create_issue', 'create_pull_request', 'get_issue', 'add_issue_comment', 'get_file_contents', 'push_files', 'update_issue']
+        env: { GITHUB_PERSONAL_ACCESS_TOKEN: process.env.GITHUB_PAT_FLATFROG }
     },
     sentry: {
         cmd: "node",
