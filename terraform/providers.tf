@@ -4,6 +4,9 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    uptimerobot = {
+      source  = "uptimerobot/uptimerobot"
+    }
   }
   backend "s3" {
     bucket  = "flatfrog.games"
