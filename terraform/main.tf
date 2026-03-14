@@ -11,6 +11,10 @@ data "aws_ssm_parameter" "github_pat" {
   name = "/arundel-cloud/mcp/github_pat"
 }
 
+data "aws_ssm_parameter" "github_pat_flatfrog" {
+  name = "/arundel-cloud/mcp/github_pat_flatfrog"
+}
+
 data "aws_ssm_parameter" "sentry_token" {
   name = "/arundel-cloud/mcp/sentry_token"
 }
@@ -36,10 +40,17 @@ resource "aws_ecs_task_definition" "mcp_hub" {
   container_definitions = jsonencode([
     {
       name      = "mcp-hub"
-      image     = "649968665109.dkr.ecr.eu-west-2.amazonaws.com/mcp-hub:latest"
+      image     = "649968665109.dkr.ecr.eu-west-2.amazonaws.com/mcp-hub:v2"
       cpu       = 512
       memory    = 1024
       essential = true
+      healthCheck = {
+        command     = ["CMD-SHELL", "curl -f http://localhost:8083/health || exit 1"]
+        interval    = 30
+        timeout     = 5
+        retries     = 3
+        startPeriod = 60
+      }
       portMappings = [
         {
           containerPort = 8083
@@ -51,6 +62,10 @@ resource "aws_ecs_task_definition" "mcp_hub" {
         {
           name      = "GITHUB_PAT"
           valueFrom = data.aws_ssm_parameter.github_pat.arn
+        },
+        {
+          name      = "GITHUB_PAT_FLATFROG"
+          valueFrom = data.aws_ssm_parameter.github_pat_flatfrog.arn
         },
         {
           name      = "SENTRY_TOKEN"
@@ -92,6 +107,9 @@ resource "aws_ecs_service" "mcp_hub" {
   tags = {
     CloudflareDNS = "mcp.svc.arundel.cloud"
   }
+
+  deployment_maximum_percent         = 100
+  deployment_minimum_healthy_percent = 0
 
   placement_constraints {
     type       = "memberOf"

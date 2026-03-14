@@ -94,7 +94,7 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          IMAGE_TAG=latest
+          IMAGE_TAG=v2
           ECR_REPO=649968665109.dkr.ecr.eu-west-2.amazonaws.com/mcp-hub
           docker build -t $ECR_REPO:$IMAGE_TAG .
           docker push $ECR_REPO:$IMAGE_TAG
